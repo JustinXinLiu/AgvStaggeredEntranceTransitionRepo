@@ -12,9 +12,9 @@
 
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Numerics;
+using System.Threading.Tasks;
 using Windows.Foundation.Collections;
 using Windows.UI.Composition;
 using Windows.UI.Xaml;
@@ -57,7 +57,8 @@ namespace Microsoft.Toolkit.Uwp.UI.Controls
         private readonly ScalarKeyFrameAnimation _opacityAnimation;
 
         // Can be made as dependency properties
-        private const int AnimationDuration = 400;
+        private const int InitialDelay = 400;
+        private const int AnimationDuration = 360;
         private const int AnimationDelay = 100;
 
         /// <summary>
@@ -84,7 +85,7 @@ namespace Microsoft.Toolkit.Uwp.UI.Controls
             var compositor = ElementCompositionPreview.GetElementVisual(this).Compositor;
             _scaleAnimation = compositor.CreateVector3KeyFrameAnimation();
             _scaleAnimation.Duration = TimeSpan.FromMilliseconds(AnimationDuration);
-            _scaleAnimation.InsertKeyFrame(0, new Vector3(0.75f, 0.75f, 0));
+            _scaleAnimation.InsertKeyFrame(0, new Vector3(0.8f, 0.8f, 0));
             _scaleAnimation.InsertKeyFrame(1, Vector3.One, EaseOutCubic(compositor));
             _opacityAnimation = compositor.CreateScalarKeyFrameAnimation();
             _opacityAnimation.Duration = TimeSpan.FromMilliseconds(AnimationDuration);
@@ -106,7 +107,7 @@ namespace Microsoft.Toolkit.Uwp.UI.Controls
         /// </summary>
         /// <param name="obj">The element that's used to display the specified item.</param>
         /// <param name="item">The item to display.</param>
-        protected override void PrepareContainerForItemOverride(DependencyObject obj, object item)
+        protected override async void PrepareContainerForItemOverride(DependencyObject obj, object item)
         {
             base.PrepareContainerForItemOverride(obj, item);
             var element = obj as FrameworkElement;
@@ -145,7 +146,7 @@ namespace Microsoft.Toolkit.Uwp.UI.Controls
                 // When all items are visible, run the staggered animation in the end.
                 if (!_isAnimated && index == Items?.Count - 1)
                 {
-                    RunStaggeredAnimationOnItemContainers(numberOfColumns);
+                    await RunStaggeredAnimationOnItemContainersAsync(numberOfColumns);
                 }
             }
             else
@@ -154,30 +155,29 @@ namespace Microsoft.Toolkit.Uwp.UI.Controls
                 _isAnimated = true;
 
                 // Only run the staggered animation once when all visible items are rendered.
-                RunStaggeredAnimationOnItemContainers(numberOfColumns);
+                await RunStaggeredAnimationOnItemContainersAsync(numberOfColumns);
             }
         }
 
-        private void RunStaggeredAnimationOnItemContainers(int numberOfColumns)
+        private async Task RunStaggeredAnimationOnItemContainersAsync(int numberOfColumns)
         {
-            var numberOfRows = Math.Ceiling(ActualHeight / ItemHeight);
-            var max = Math.Max(numberOfRows, numberOfColumns);
+            await Task.Delay(InitialDelay);
 
-            for (var i = 0; i < max; i++)
+            var numberOfRows = Math.Ceiling(ActualHeight / ItemHeight);
+            var last = (numberOfRows - 1) + (numberOfColumns - 1);
+
+            for (var i = 0; i <= last; i++)
             {
-                var colOrRow = i;
-                var containers =
-                    _visibleItemContainers.Where(c => c.Value.Row == colOrRow || c.Value.Column == colOrRow).Select(k => k.Key);
+                var sum = i;
+                var containers = _visibleItemContainers.Where(c => c.Value.Row + c.Value.Column == sum).Select(k => k.Key);
 
                 foreach (var container in containers)
                 {
                     var containerVisual = ElementCompositionPreview.GetElementVisual(container);
                     _scaleAnimation.DelayTime = _opacityAnimation.DelayTime = TimeSpan.FromMilliseconds(AnimationDelay * i);
                     containerVisual.CenterPoint = new Vector3((float)ItemWidth, (float)ItemHeight, 0) * 0.5f;
-                    containerVisual.StartAnimation("Scale", _scaleAnimation);
-                    containerVisual.StartAnimation("Opacity", _opacityAnimation);
-
-                    Debug.WriteLine($"{IndexFromContainer(container)}");
+                    containerVisual.StartAnimation(nameof(Visual.Scale), _scaleAnimation);
+                    containerVisual.StartAnimation(nameof(Visual.Opacity), _opacityAnimation);
                 }
             }
         }
