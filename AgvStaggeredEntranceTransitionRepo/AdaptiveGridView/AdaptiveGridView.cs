@@ -57,8 +57,8 @@ namespace Microsoft.Toolkit.Uwp.UI.Controls
         private readonly ScalarKeyFrameAnimation _opacityAnimation;
 
         // Can be made as dependency properties
-        private const int AnimationDuration = 4000;
-        private const int AnimationDelay = 4000;
+        private const int AnimationDuration = 400;
+        private const int AnimationDelay = 100;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="AdaptiveGridView"/> class.
