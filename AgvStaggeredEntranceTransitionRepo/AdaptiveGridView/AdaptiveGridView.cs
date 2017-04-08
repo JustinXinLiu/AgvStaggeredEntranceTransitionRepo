@@ -315,6 +315,7 @@ namespace Microsoft.Toolkit.Uwp.UI.Controls
 
                     if (itemsWrapGridPanel != null)
                     {
+                        _savedOrientation = itemsWrapGridPanel.Orientation;
                         itemsWrapGridPanel.Orientation = _savedOrientation;
                     }
 
