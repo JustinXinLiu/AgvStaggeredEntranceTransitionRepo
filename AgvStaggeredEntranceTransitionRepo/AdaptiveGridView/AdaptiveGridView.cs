@@ -50,6 +50,12 @@ namespace Microsoft.Toolkit.Uwp.UI.Controls
     public partial class AdaptiveGridView : GridView
     {
         private bool _isLoaded;
+        private ScrollMode _savedVerticalScrollMode;
+        private ScrollMode _savedHorizontalScrollMode;
+        private ScrollBarVisibility _savedVerticalScrollBarVisibility;
+        private ScrollBarVisibility _savedHorizontalScrollBarVisibility;
+        private Orientation _savedOrientation;
+        private bool _needToRestoreScrollStates;
 
         private bool _isAnimated;
         private readonly Dictionary<FrameworkElement, Position> _visibleItemContainers = new Dictionary<FrameworkElement, Position>();
@@ -141,6 +147,11 @@ namespace Microsoft.Toolkit.Uwp.UI.Controls
             if (itemsWrapGrid.LastVisibleIndex <= 0)
             {
                 ElementCompositionPreview.GetElementVisual(element).Opacity = 0;
+
+                if (_visibleItemContainers.ContainsKey(element))
+                {
+                    _visibleItemContainers.Remove(element);
+                }
                 _visibleItemContainers.Add(element, new Position(rowIndex, colIndex));
 
                 // When all items are visible, run the staggered animation in the end.
@@ -280,23 +291,37 @@ namespace Microsoft.Toolkit.Uwp.UI.Controls
 
                     SetBinding(MaxHeightProperty, b);
 
+                    _savedHorizontalScrollMode = ScrollViewer.GetHorizontalScrollMode(this);
+                    _savedVerticalScrollMode = ScrollViewer.GetVerticalScrollMode(this);
+                    _savedHorizontalScrollBarVisibility = ScrollViewer.GetHorizontalScrollBarVisibility(this);
+                    _savedVerticalScrollBarVisibility = ScrollViewer.GetVerticalScrollBarVisibility(this);
+                    _needToRestoreScrollStates = true;
+
                     ScrollViewer.SetVerticalScrollMode(this, ScrollMode.Disabled);
-                    ScrollViewer.SetVerticalScrollBarVisibility(this, ScrollBarVisibility.Disabled);
+                    ScrollViewer.SetVerticalScrollBarVisibility(this, ScrollBarVisibility.Hidden);
                     ScrollViewer.SetHorizontalScrollBarVisibility(this, ScrollBarVisibility.Visible);
                     ScrollViewer.SetHorizontalScrollMode(this, ScrollMode.Enabled);
                 }
                 else
                 {
-                    this.ClearValue(MaxHeightProperty);
-                    if (itemsWrapGridPanel != null)
+                    ClearValue(MaxHeightProperty);
+
+                    if (!_needToRestoreScrollStates)
                     {
-                        itemsWrapGridPanel.Orientation = Orientation.Horizontal;
+                        return;
                     }
 
-                    ScrollViewer.SetVerticalScrollMode(this, ScrollMode.Enabled);
-                    ScrollViewer.SetVerticalScrollBarVisibility(this, ScrollBarVisibility.Visible);
-                    ScrollViewer.SetHorizontalScrollBarVisibility(this, ScrollBarVisibility.Disabled);
-                    ScrollViewer.SetHorizontalScrollMode(this, ScrollMode.Disabled);
+                    _needToRestoreScrollStates = false;
+
+                    if (itemsWrapGridPanel != null)
+                    {
+                        itemsWrapGridPanel.Orientation = _savedOrientation;
+                    }
+
+                    ScrollViewer.SetVerticalScrollMode(this, _savedVerticalScrollMode);
+                    ScrollViewer.SetVerticalScrollBarVisibility(this, _savedVerticalScrollBarVisibility);
+                    ScrollViewer.SetHorizontalScrollBarVisibility(this, _savedHorizontalScrollBarVisibility);
+                    ScrollViewer.SetHorizontalScrollMode(this, _savedHorizontalScrollMode);
                 }
             }
         }
